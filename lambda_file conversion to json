@@ -1,0 +1,44 @@
+import json
+import urllib.parse as urlp
+import boto3
+import time
+s3 = boto3.client('s3')
+
+def object_exists(bucket, key):
+    try:
+        # Try to get metadata for the object
+        s3.head_object(Bucket=bucket, Key=key)
+        print(f"The object with key '{key}' exists in the bucket '{bucket}'.")
+    except Exception as e:
+        # Handle the exception if the object doesn't exist
+        if '404' in str(e):
+            print(f"The object with key '{key}' does not exist in the bucket '{bucket}'.")
+        else:
+            print(f"An error occurred: {e}")
+def lambda_handler(event, context):
+    # Get the bucket and key of the newly created object
+    print(event)
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    print("bucket data added : ",bucket)
+    key = event['Records'][0]['s3']['object']['key']
+    print("bucket key : ",key)
+    object_exists(bucket,key)
+    # Modify the file extension to ".json"
+    new_key = key.rsplit('.', 1)[0] + '.json'
+    
+    modified_key = new_key.replace("text_folder", "raw_folder")
+    print("New Key ",modified_key)
+    # Checking if key exists
+    object_exists(bucket,key)
+    # Copy the object with the new key
+    s3.copy_object(
+        CopySource={'Bucket': bucket, 'Key': urlp.unquote_plus(key)},
+        Bucket=bucket,
+        Key=modified_key
+    )
+    # try:
+    #     # Delete the specified object
+    #     s3.delete_object(Bucket=bucket, Key=key)
+    #     print(f"The object with key '{key}' has been deleted from the bucket '{bucket}'.")
+    # except Exception as e:
+    #     print(f"An error occurred: {e}")
